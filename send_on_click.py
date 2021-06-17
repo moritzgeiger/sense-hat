@@ -6,8 +6,10 @@ import email
 from dotenv import load_dotenv, find_dotenv
 import os
 from datetime import datetime
+from time import sleep
 
 homename = 'Bunkuhome'
+sense = SenseHat()
 
 def load_args():
 	"""
@@ -18,7 +20,7 @@ def load_args():
 	GMAIL = os.environ.get("GMAIL")
 	port = 465  # For SSL
 	sender_email = os.environ.get("SENDER")
-	receiver_email = input("Send email to: ")
+	receiver_email = os.environ.get("RECEIVER")
 	now = datetime.now().strftime("%y-%m-%d %H:%M:%S")
 	subject = f"Subject: {homename} stats at {now}\n"
 	signature = "\n\nsent to you with love from raspberry"
@@ -65,18 +67,53 @@ def send_mail(port,
 	with smtplib.SMTP_SSL("smtp.gmail.com", port, context=context) as server:
 		server.login(sender_email, password)
 		server.sendmail(sender_email, receiver_email, message)
+def success():
+	"""
+	will output a success message on the sense HAT
+	"""
+	# Define bacl and white
+	w = (255, 255, 255) # white
+	b = (0, 0, 0) # Black
 
-if __name__ == '__main__':
-	# get email stuff
-	port, GMAIL, sender_email, receiver_email, subject, signature = load_args()
+	# Set up where the whites should display
+	pixels = [
+    w, w, w, w, w, w, w, w,
+    w, w, b, b, b, b, w, w,
+    w, b, w, b, b, w, b, w,
+    w, b, b, w, w, b, b, w,
+    w, b, b, b, b, b, b, w,
+    w, b, b, b, b, b, b, w,
+    w, b, b, b, b, b, b, w,
+    w, w, w, w, w, w, w, w
+	]
 	
-	# get stats
-	message = get_temp() + get_hum()
+	# display the pattern
+	sense.set_pixels(pixels)
+
+
+def send_on_click(event):
+	# do sth _after_ the button is released
+	if event.action == 'released':
+		sense.clear()
+		port, GMAIL, sender_email, receiver_email, subject, signature = load_args()
+			# get stats
+		message = get_temp() + get_hum()
 	
-	send_mail(port=port, 
+		send_mail(port=port, 
 			password=GMAIL, 
 			receiver_email=receiver_email,
 			message=subject+message+signature, # compile message
 			sender_email=sender_email)
-	print(f"email sent to {receiver_email}")
-	print(f"final message: {subject+message+signature}")
+		print(f"email sent to {receiver_email}")
+		print(f"final message: {subject+message+signature}")
+		
+		success()
+		sleep(2)
+		sense.clear()
+		sleep(10)
+
+## ACTUALLY SEND STUFF WHEN CLICKED
+sense.stick.direction_middle = send_on_click
+
+while True:
+	pass
